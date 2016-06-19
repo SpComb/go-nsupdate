@@ -2,50 +2,10 @@ package main
 
 import (
 	"github.com/jessevdk/go-flags"
-	"github.com/vishvananda/netlink"
-	"github.com/miekg/dns"
-	"net"
-	"fmt"
 	"log"
 	"os"
 	"time"
 )
-
-// zero value is unspec=all
-type Family int
-
-func (f *Family) UnmarshalFlag(value string) error {
-	switch (value) {
-	case "inet", "ipv4":
-		*f = netlink.FAMILY_V4
-	case "inet6", "ipv6":
-		*f = netlink.FAMILY_V6
-	default:
-		return fmt.Errorf("Invalid --family=%v", value)
-	}
-
-	return nil
-}
-
-const TSIG_FUDGE_SECONDS = 300
-type TSIGAlgorithm string
-
-func (t *TSIGAlgorithm) UnmarshalFlag(value string) error {
-	switch (value) {
-	case "hmac-md5", "md5":
-		*t = dns.HmacMD5
-	case "hmac-sha1", "sha1":
-		*t = dns.HmacSHA1
-	case "hmac-sha256", "sha256":
-		*t = dns.HmacSHA256
-	case "hmac-sha512", "sha512":
-		*t = dns.HmacSHA512
-	default:
-		return fmt.Errorf("Invalid --tsig-algorithm=%v", value)
-	}
-
-	return nil
-}
 
 type Options struct {
 	Verbose			bool	`long:"verbose" short:"v"`
@@ -75,33 +35,32 @@ func main() {
 		os.Exit(1)
 	}
 
-	var update = &Update{
-		zone:	 dns.Fqdn(options.Zone),
-		name:	 dns.Fqdn(options.Name),
+	var update = Update{
 		ttl:	 options.TTL,
 		timeout: options.Timeout,
 	}
 
-	if _, _, err := net.SplitHostPort(options.Server); err == nil {
-		update.server = options.Server
-	} else {
-		update.server = net.JoinHostPort(options.Server, "53")
+	if err := update.Init(options.Name, options.Zone, options.Server); err != nil {
+		log.Fatalf("init: %v", err)
 	}
 
 	if options.TSIGName != "" {
 		log.Printf("using TSIG: %v (algo=%v)", options.TSIGName, options.TSIGAlgorithm)
 
-		update.initTSIG(dns.Fqdn(options.TSIGName), options.TSIGSecret, string(options.TSIGAlgorithm))
+		update.InitTSIG(options.TSIGName, options.TSIGSecret, options.TSIGAlgorithm)
 	}
 
-	// run
+	// addrs
+	var addrs = new(AddrSet)
+
 	if options.Interface == "" {
 
-	} else if err := update.scan(options.Interface, int(options.InterfaceFamily)); err != nil {
-		log.Fatalf("scan: %v", err)
+	} else if err := addrs.ScanInterface(options.Interface, options.InterfaceFamily); err != nil {
+		log.Fatalf("addrs scan: %v", err)
 	}
 
-	if err := update.update(options.Verbose); err != nil {
+	// update
+	if err := update.Update(addrs, options.Verbose); err != nil {
 		log.Fatalf("update: %v", err)
 	}
 }

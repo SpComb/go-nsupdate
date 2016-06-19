@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/vishvananda/netlink"
 	"github.com/miekg/dns"
 	"time"
 	"fmt"
@@ -15,83 +14,64 @@ type Update struct {
 	ttl		 int
 
 	tsig	 map[string]string
-	tsigAlgo string
+	tsigAlgo TSIGAlgorithm
 	server	 string
 	timeout	 time.Duration
-
-	link	netlink.Link
-	addrs	map[string]Addr
 }
 
-func (u *Update) initTSIG(name string, secret string, algo string) {
-	u.tsig = map[string]string{name: secret}
-	u.tsigAlgo = algo
-}
+func (u *Update) Init(name string, zone string, server string) error {
+	u.name = dns.Fqdn(name)
+	u.zone = dns.Fqdn(zone)
 
-// Update state for link
-func (u *Update) scan(iface string, family int) error {
-	link, err := netlink.LinkByName(iface)
-	if err != nil {
-		return fmt.Errorf("netlink.LinkByName %v: %v", iface, err)
-	}
-
-	addrs, err := netlink.AddrList(link, family)
-	if err != nil {
-		return fmt.Errorf("netlink.AddrList %v: %v", link, err)
-	}
-
-	// set
-	u.addrs = make(map[string]Addr)
-
-	for _, addr := range addrs {
-		u.applyLinkAddr(link, addr)
+	if _, _, err := net.SplitHostPort(server); err == nil {
+		u.server = server
+	} else {
+		u.server = net.JoinHostPort(server, "53")
 	}
 
 	return nil
 }
 
-func (u *Update) applyLinkAddr(link netlink.Link, addr netlink.Addr) {
-	linkUp := link.Attrs().Flags & net.FlagUp != 0
-
-	if addr.Scope >= int(netlink.SCOPE_LINK) {
-		return
-	}
-
-	u.apply(addr.IP, linkUp)
+func (u *Update) InitTSIG(name string, secret string, algo TSIGAlgorithm) {
+	u.tsig = map[string]string{dns.Fqdn(name): secret}
+	u.tsigAlgo = algo
 }
 
-// Update state for address
-func (u *Update) apply(ip net.IP, up bool) {
-	if up {
-		log.Printf("update: up %v", ip)
-
-		u.addrs[ip.String()] = Addr{IP: ip}
-
-	} else {
-		log.Printf("update: down %v", ip)
-
-		delete(u.addrs, ip.String())
+func (u *Update) buildAddr(ip net.IP) dns.RR {
+	if ip4 := ip.To4(); ip4 != nil {
+		return &dns.A{
+			Hdr: dns.RR_Header{Name: u.name, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: uint32(u.ttl)},
+			A:	 ip4,
+		}
 	}
-}
 
-func (u *Update) buildRR() (rs []dns.RR) {
-	for _, addr := range u.addrs {
-		rs = append(rs, addr.buildRR(u.name, u.ttl))
+	if ip6 := ip.To16(); ip6 != nil {
+		return &dns.AAAA{
+			Hdr:  dns.RR_Header{Name: u.name, Rrtype: dns.TypeAAAA, Class: dns.ClassINET, Ttl: uint32(u.ttl)},
+			AAAA: ip6,
+		}
+	}
+
+	return nil
+}
+func (u *Update) buildAddrs(addrs *AddrSet) (rs []dns.RR) {
+	for _, ip := range addrs.addrs {
+		rs = append(rs, u.buildAddr(ip))
 	}
 
 	return rs
 }
 
-func (u *Update) buildMsg() *dns.Msg {
+func (u *Update) buildMsg(addrs *AddrSet) *dns.Msg {
 	var msg = new(dns.Msg)
 
 	msg.SetUpdate(u.zone)
 	msg.RemoveName([]dns.RR{&dns.RR_Header{Name:u.name}})
-	msg.Insert(u.buildRR())
+	msg.Insert(u.buildAddrs(addrs))
 
 	if u.tsig != nil {
 		for keyName, _ := range u.tsig {
-			msg.SetTsig(keyName, u.tsigAlgo, TSIG_FUDGE_SECONDS, time.Now().Unix())
+			msg.SetTsig(keyName, string(u.tsigAlgo), TSIG_FUDGE_SECONDS, time.Now().Unix())
 		}
 	}
 
@@ -122,8 +102,8 @@ func (u *Update) query(msg *dns.Msg) (*dns.Msg, error) {
 	}
 }
 
-func (u *Update) update(verbose bool) error {
-	q := u.buildMsg()
+func (u *Update) Update(addrs *AddrSet, verbose bool) error {
+	q := u.buildMsg(addrs)
 
 	if verbose {
 		log.Printf("query:\n%v", q)
