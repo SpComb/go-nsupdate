@@ -1,31 +1,31 @@
 package main
 
 import (
-	"github.com/miekg/dns"
-	"time"
 	"fmt"
-	"net"
+	"github.com/miekg/dns"
 	"log"
+	"net"
+	"time"
 )
 
 type updateState struct {
-	updateZone	string
-	removeNames	[]dns.RR
-	inserts		[]dns.RR
+	updateZone  string
+	removeNames []dns.RR
+	inserts     []dns.RR
 }
 
 type Update struct {
-	ttl		 int
-	timeout  time.Duration
-	retry	 time.Duration
-	verbose	 bool
+	ttl     int
+	timeout time.Duration
+	retry   time.Duration
+	verbose bool
 
-	zone	 string
-	name	 string
+	zone string
+	name string
 
-	tsig	 map[string]string
+	tsig     map[string]string
 	tsigAlgo TSIGAlgorithm
-	server	 string
+	server   string
 
 	updateChan chan updateState
 	doneChan   chan error
@@ -77,7 +77,7 @@ func (u *Update) buildAddr(ip net.IP) dns.RR {
 	if ip4 := ip.To4(); ip4 != nil {
 		return &dns.A{
 			Hdr: dns.RR_Header{Name: u.name, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: uint32(u.ttl)},
-			A:	 ip4,
+			A:   ip4,
 		}
 	}
 
@@ -93,10 +93,10 @@ func (u *Update) buildAddr(ip net.IP) dns.RR {
 func (u *Update) buildState(addrs *AddrSet) (state updateState, err error) {
 	state.updateZone = u.zone
 	state.removeNames = []dns.RR{
-		&dns.RR_Header{Name:u.name},
+		&dns.RR_Header{Name: u.name},
 	}
 
-	addrs.Each(func(ip net.IP){
+	addrs.Each(func(ip net.IP) {
 		state.inserts = append(state.inserts, u.buildAddr(ip))
 	})
 
@@ -173,7 +173,7 @@ func (u *Update) run() {
 	var updateChan = u.updateChan
 	var updateError error
 
-	defer func(){u.doneChan <-updateError}()
+	defer func() { u.doneChan <- updateError }()
 
 	for {
 		select {

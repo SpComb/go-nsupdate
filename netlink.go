@@ -1,15 +1,15 @@
 package main
 
 import (
-	"github.com/vishvananda/netlink"
 	"fmt"
+	"github.com/vishvananda/netlink"
 )
 
 // zero value is unspec=all
 type Family int
 
 func (f *Family) UnmarshalFlag(value string) error {
-	switch (value) {
+	switch value {
 	case "unspec", "all":
 		*f = netlink.FAMILY_ALL
 	case "inet", "ipv4":
@@ -22,5 +22,3 @@ func (f *Family) UnmarshalFlag(value string) error {
 
 	return nil
 }
-
-

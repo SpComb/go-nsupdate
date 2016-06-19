@@ -1,18 +1,19 @@
 package main
 
 import (
-	"github.com/miekg/dns"
 	"fmt"
-	"time"
+	"github.com/miekg/dns"
 	"log"
 	"net"
+	"time"
 )
 
 const TSIG_FUDGE_SECONDS = 300
+
 type TSIGAlgorithm string
 
 func (t *TSIGAlgorithm) UnmarshalFlag(value string) error {
-	switch (value) {
+	switch value {
 	case "hmac-md5", "md5":
 		*t = dns.HmacMD5
 	case "hmac-sha1", "sha1":

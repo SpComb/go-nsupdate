@@ -1,19 +1,19 @@
 package main
 
 import (
-	"net"
-	"github.com/vishvananda/netlink"
 	"fmt"
-	"log"
+	"github.com/vishvananda/netlink"
 	"io"
+	"log"
+	"net"
 )
 
 type AddrSet struct {
-	linkAttrs	netlink.LinkAttrs
-	linkChan	chan netlink.LinkUpdate
-	addrChan	chan netlink.AddrUpdate
+	linkAttrs netlink.LinkAttrs
+	linkChan  chan netlink.LinkUpdate
+	addrChan  chan netlink.AddrUpdate
 
-	addrs	map[string]net.IP
+	addrs map[string]net.IP
 }
 
 func (addrs *AddrSet) String() string {
@@ -21,7 +21,7 @@ func (addrs *AddrSet) String() string {
 }
 
 func (addrs *AddrSet) testFlag(flag net.Flags) bool {
-	return addrs.linkAttrs.Flags & flag != 0
+	return addrs.linkAttrs.Flags&flag != 0
 }
 
 func (addrs *AddrSet) Up() bool {
