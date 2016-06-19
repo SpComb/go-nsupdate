@@ -8,15 +8,27 @@ import (
 	"log"
 )
 
+type updateState struct {
+	updateZone	string
+	removeNames	[]dns.RR
+	inserts		[]dns.RR
+}
+
 type Update struct {
+	ttl		 int
+	timeout  time.Duration
+	retry	 time.Duration
+	verbose	 bool
+
 	zone	 string
 	name	 string
-	ttl		 int
 
 	tsig	 map[string]string
 	tsigAlgo TSIGAlgorithm
 	server	 string
-	timeout	 time.Duration
+
+	updateChan chan updateState
+	doneChan   chan error
 }
 
 func (u *Update) Init(name string, zone string, server string) error {
@@ -78,20 +90,24 @@ func (u *Update) buildAddr(ip net.IP) dns.RR {
 
 	return nil
 }
-func (u *Update) buildAddrs(addrs *AddrSet) (rs []dns.RR) {
-	for _, ip := range addrs.addrs {
-		rs = append(rs, u.buildAddr(ip))
+func (u *Update) buildState(addrs *AddrSet) (state updateState, err error) {
+	state.updateZone = u.zone
+	state.removeNames = []dns.RR{
+		&dns.RR_Header{Name:u.name},
 	}
 
-	return rs
-}
+	addrs.Each(func(ip net.IP){
+		state.inserts = append(state.inserts, u.buildAddr(ip))
+	})
 
-func (u *Update) buildMsg(addrs *AddrSet) *dns.Msg {
+	return
+}
+func (u *Update) buildQuery(state updateState) *dns.Msg {
 	var msg = new(dns.Msg)
 
-	msg.SetUpdate(u.zone)
-	msg.RemoveName([]dns.RR{&dns.RR_Header{Name:u.name}})
-	msg.Insert(u.buildAddrs(addrs))
+	msg.SetUpdate(state.updateZone)
+	msg.RemoveName(state.removeNames)
+	msg.Insert(state.inserts)
 
 	if u.tsig != nil {
 		for keyName, _ := range u.tsig {
@@ -126,11 +142,13 @@ func (u *Update) query(msg *dns.Msg) (*dns.Msg, error) {
 	}
 }
 
-func (u *Update) Update(addrs *AddrSet, verbose bool) error {
-	q := u.buildMsg(addrs)
+func (u *Update) update(state updateState) error {
+	q := u.buildQuery(state)
 
-	if verbose {
-		log.Printf("query:\n%v", q)
+	if u.verbose {
+		log.Printf("update query:\n%v", q)
+	} else {
+		log.Printf("update query...")
 	}
 
 	r, err := u.query(q)
@@ -139,9 +157,101 @@ func (u *Update) Update(addrs *AddrSet, verbose bool) error {
 		return err
 	}
 
-	if verbose {
-		log.Printf("answer:\n%v", r)
+	if u.verbose {
+		log.Printf("update answer:\n%v", r)
+	} else {
+		log.Printf("update answer")
 	}
 
 	return nil
+}
+
+func (u *Update) run() {
+	var state updateState
+	var retry = 0
+	var retryTimer = time.NewTimer(time.Duration(0))
+	var updateChan = u.updateChan
+	var updateError error
+
+	defer func(){u.doneChan <-updateError}()
+
+	for {
+		select {
+		case updateState, running := <-updateChan:
+			if running {
+				// Update() called
+				state = updateState
+
+			} else if retry > 0 {
+				// Done() called, but still waiting for retry...
+				updateChan = nil
+				continue
+
+			} else {
+				// Done() called, no retrys or updates remaining
+				return
+			}
+
+		case <-retryTimer.C:
+			if retry == 0 {
+				// spurious timer event..
+				continue
+			}
+
+			// trigger retry
+		}
+
+		if err := u.update(state); err != nil {
+			log.Printf("update (retry=%v) error: %v", retry, err)
+
+			updateError = err
+			retry++
+		} else {
+			// success
+			updateError = nil
+			retry = 0
+		}
+
+		if retry == 0 && updateChan == nil {
+			// done, no more updates
+			return
+
+		} else if retry == 0 {
+			// wait for next update
+			retryTimer.Stop()
+
+		} else {
+			retryTimeout := time.Duration(retry * int(u.retry))
+
+			// wait for next retry
+			// TODO: exponential backoff?
+			retryTimer.Reset(retryTimeout)
+
+			log.Printf("update retry in %v...", retryTimeout)
+		}
+	}
+}
+
+func (u *Update) Start() {
+	u.updateChan = make(chan updateState)
+
+	go u.run()
+}
+
+func (u *Update) Update(addrs *AddrSet) error {
+	if state, err := u.buildState(addrs); err != nil {
+		return err
+	} else {
+		u.updateChan <- state
+	}
+
+	return nil
+}
+
+func (u *Update) Done() error {
+	u.doneChan = make(chan error)
+
+	close(u.updateChan)
+
+	return <-u.doneChan
 }

@@ -9,18 +9,20 @@ import (
 
 type Options struct {
 	Verbose			bool	`long:"verbose" short:"v"`
+	Watch			bool	`long:"watch" description:"Watch for interface changes"`
 
 	Interface		string	`long:"interface" short:"i" value-name:"IFACE" description:"Use address from interface"`
 	InterfaceFamily	Family	`long:"interface-family"`
 
 	Server		string	`long:"server" value-name:"HOST[:PORT]"`
 	Timeout		time.Duration `long:"timeout" value-name:"DURATION" default:"10s"`
+	Retry		time.Duration `long:"retry" value-name:"DURATION" default:"30s"`
 	TSIGName	string	`long:"tsig-name"`
 	TSIGSecret	string	`long:"tsig-secret" env:"TSIG_SECRET"`
 	TSIGAlgorithm TSIGAlgorithm `long:"tsig-algorithm" default:"hmac-sha1."`
 
 	Zone		string	`long:"zone" description:"Zone to update"`
-	TTL			int		`long:"ttl" default:"60"`
+	TTL			time.Duration `long:"ttl" default:"60s"`
 
 	Args		struct {
 		Name		string	`description:"DNS Name to update"`
@@ -36,8 +38,10 @@ func main() {
 	}
 
 	var update = Update{
-		ttl:	 options.TTL,
+		ttl:	 int(options.TTL.Seconds()),
 		timeout: options.Timeout,
+		retry:   options.Retry,
+		verbose: options.Verbose,
 	}
 
 	if err := update.Init(options.Args.Name, options.Zone, options.Server); err != nil {
@@ -57,18 +61,37 @@ func main() {
 	}
 
 	// addrs
-	var addrs = new(AddrSet)
-
-	if options.Interface == "" {
-
-	} else if err := addrs.ScanInterface(options.Interface, options.InterfaceFamily); err != nil {
+	addrs, err := InterfaceAddrs(options.Interface, options.InterfaceFamily)
+	if err != nil {
 		log.Fatalf("addrs scan: %v", err)
 	}
 
 	// update
-	if err := update.Update(addrs, options.Verbose); err != nil {
-		log.Fatalf("update: %v", err)
+	update.Start()
+
+	for {
+		log.Printf("update...")
+
+		if err := update.Update(addrs); err != nil {
+			log.Fatalf("update: %v", err)
+		}
+
+		if !options.Watch {
+			break
+		}
+
+		if err := addrs.Read(); err != nil {
+			log.Fatalf("addrs read: %v", err)
+		} else {
+			log.Printf("addrs update...")
+		}
+	}
+
+	log.Printf("wait...")
+
+	if err := update.Done(); err != nil {
+		log.Printf("update done: %v", err)
 	} else {
-		log.Printf("update: ok")
+		log.Printf("update done")
 	}
 }
