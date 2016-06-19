@@ -10,6 +10,8 @@ type Family int
 
 func (f *Family) UnmarshalFlag(value string) error {
 	switch (value) {
+	case "unspec", "all":
+		*f = netlink.FAMILY_ALL
 	case "inet", "ipv4":
 		*f = netlink.FAMILY_V4
 	case "inet6", "ipv6":

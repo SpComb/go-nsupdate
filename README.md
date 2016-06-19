@@ -13,6 +13,30 @@ The DNS update requests are retried in the background (XXX: currently blocks for
 
 ## Usage
 
+	Usage:
+	  go-nsupdate [OPTIONS] [Name]
+
+	Application Options:
+	  -v, --verbose
+		  --watch                                           Watch for interface changes
+	  -i, --interface=IFACE                                 Use address from interface
+		  --interface-family=ipv4|ipv6|all
+		  --server=HOST[:PORT]
+		  --timeout=DURATION
+		  --retry=DURATION
+		  --tsig-name=FQDN
+		  --tsig-secret=BASE-64
+		  --tsig-algorithm=hmac-{md5,sha1,sha256,sha512}
+		  --zone=FQDN                                       Zone to update
+		  --ttl=DURATION
+
+	Help Options:
+	  -h, --help                                            Show this help message
+
+	Arguments:
+	  Name:                                                 DNS Name to update
+
+## Example
     
     # Using a generated TSIG key:
     # TSIG_SECRET=$(python -c 'import os; print os.urandom(32).encode("base64")')

@@ -12,17 +12,17 @@ type Options struct {
 	Watch			bool	`long:"watch" description:"Watch for interface changes"`
 
 	Interface		string	`long:"interface" short:"i" value-name:"IFACE" description:"Use address from interface"`
-	InterfaceFamily	Family	`long:"interface-family"`
+	InterfaceFamily	Family	`long:"interface-family" value-name:"ipv4|ipv6|all"`
 
 	Server		string	`long:"server" value-name:"HOST[:PORT]"`
 	Timeout		time.Duration `long:"timeout" value-name:"DURATION" default:"10s"`
 	Retry		time.Duration `long:"retry" value-name:"DURATION" default:"30s"`
-	TSIGName	string	`long:"tsig-name"`
-	TSIGSecret	string	`long:"tsig-secret" env:"TSIG_SECRET"`
-	TSIGAlgorithm TSIGAlgorithm `long:"tsig-algorithm" default:"hmac-sha1."`
+	TSIGName	string	`long:"tsig-name" value-name:"FQDN"`
+	TSIGSecret	string	`long:"tsig-secret" value-name:"BASE-64" env:"TSIG_SECRET"`
+	TSIGAlgorithm TSIGAlgorithm `long:"tsig-algorithm" value-name:"hmac-{md5,sha1,sha256,sha512}" default:"hmac-sha1."`
 
-	Zone		string	`long:"zone" description:"Zone to update"`
-	TTL			time.Duration `long:"ttl" default:"60s"`
+	Zone		string	`long:"zone" value-name:"FQDN" description:"Zone to update"`
+	TTL			time.Duration `long:"ttl" value-name:"DURATION" default:"60s"`
 
 	Args		struct {
 		Name		string	`description:"DNS Name to update"`
