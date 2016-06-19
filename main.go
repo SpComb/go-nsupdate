@@ -62,5 +62,7 @@ func main() {
 	// update
 	if err := update.Update(addrs, options.Verbose); err != nil {
 		log.Fatalf("update: %v", err)
+	} else {
+		log.Printf("update: ok")
 	}
 }

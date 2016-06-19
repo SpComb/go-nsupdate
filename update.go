@@ -20,13 +20,37 @@ type Update struct {
 }
 
 func (u *Update) Init(name string, zone string, server string) error {
-	u.name = dns.Fqdn(name)
-	u.zone = dns.Fqdn(zone)
-
-	if _, _, err := net.SplitHostPort(server); err == nil {
-		u.server = server
+	if name == "" {
+		return fmt.Errorf("Missing name")
 	} else {
-		u.server = net.JoinHostPort(server, "53")
+		u.name = dns.Fqdn(name)
+	}
+
+	if zone == "" {
+		// guess
+		if labels := dns.Split(u.name); len(labels) > 1 {
+			u.zone = u.name[labels[1]:]
+		} else {
+			return fmt.Errorf("Missing zone")
+		}
+	} else {
+		u.zone = dns.Fqdn(zone)
+	}
+
+	if server == "" {
+		if server, err := discoverZoneServer(u.zone); err != nil {
+			return fmt.Errorf("Failed to discver server")
+		} else {
+			log.Printf("discover server=%v", server)
+
+			u.server = net.JoinHostPort(server, "53")
+		}
+	} else {
+		if _, _, err := net.SplitHostPort(server); err == nil {
+			u.server = server
+		} else {
+			u.server = net.JoinHostPort(server, "53")
+		}
 	}
 
 	return nil
