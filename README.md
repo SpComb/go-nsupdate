@@ -9,7 +9,7 @@ The DNS update requests are retried in the background (XXX: currently blocks for
 
 ## Install
 
-    go get -v github.com/qmsk/go-nsupdate
+    go get github.com/SpComb/go-nsupdate
 
 ## Usage
 
