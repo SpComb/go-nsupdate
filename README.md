@@ -20,21 +20,22 @@ The DNS update requests are retried in the background (XXX: currently blocks for
 	  -v, --verbose
 		  --watch                                           Watch for interface changes
 	  -i, --interface=IFACE                                 Use address from interface
-		  --interface-family=ipv4|ipv6|all
-		  --server=HOST[:PORT]
-		  --timeout=DURATION
-		  --retry=DURATION
+		  --interface-family=ipv4|ipv6|all                  Limit to interface addreses of given family
+		  --server=HOST[:PORT]                              Server for UPDATE query, default is discovered from zone SOA
+		  --timeout=DURATION                                Timeout for sever queries (default: 10s)
+		  --retry=DURATION                                  Retry interval, increased for each retry attempt (default: 30s)
 		  --tsig-name=FQDN
-		  --tsig-secret=BASE-64
+		  --tsig-secret=BASE-64                             base64-encoded shared TSIG secret key [$TSIG_SECRET]
 		  --tsig-algorithm=hmac-{md5,sha1,sha256,sha512}
-		  --zone=FQDN                                       Zone to update
-		  --ttl=DURATION
+		  --zone=FQDN                                       Zone to update, default is derived from name
+		  --ttl=DURATION                                    TTL for updated records (default: 60s)
 
 	Help Options:
 	  -h, --help                                            Show this help message
 
 	Arguments:
 	  Name:                                                 DNS Name to update
+
 
 ## Example
     
