@@ -20,18 +20,18 @@ type Options struct {
 	TSIGAlgorithm TSIGAlgorithm `long:"tsig-algorithm" default:"hmac-sha1."`
 
 	Zone		string	`long:"zone" description:"Zone to update"`
-	Name		string	`long:"name" description:"Name to update"`
 	TTL			int		`long:"ttl" default:"60"`
+
+	Args		struct {
+		Name		string	`description:"DNS Name to update"`
+	} `positional-args:"yes"`
 }
 
 func main() {
 	var options Options
 
-	if args, err := flags.Parse(&options); err != nil {
+	if _, err := flags.Parse(&options); err != nil {
 		log.Fatalf("flags.Parse: %v", err)
-		os.Exit(1)
-	} else if len(args) > 0 {
-		log.Fatalf("Usage: no args")
 		os.Exit(1)
 	}
 
@@ -40,14 +40,20 @@ func main() {
 		timeout: options.Timeout,
 	}
 
-	if err := update.Init(options.Name, options.Zone, options.Server); err != nil {
+	if err := update.Init(options.Args.Name, options.Zone, options.Server); err != nil {
 		log.Fatalf("init: %v", err)
 	}
 
-	if options.TSIGName != "" {
-		log.Printf("using TSIG: %v (algo=%v)", options.TSIGName, options.TSIGAlgorithm)
+	if options.TSIGSecret != "" {
+		var name = options.TSIGName
 
-		update.InitTSIG(options.TSIGName, options.TSIGSecret, options.TSIGAlgorithm)
+		if name == "" {
+			name = options.Args.Name
+		}
+
+		log.Printf("using TSIG: %v (algo=%v)", name, options.TSIGAlgorithm)
+
+		update.InitTSIG(name, options.TSIGSecret, options.TSIGAlgorithm)
 	}
 
 	// addrs
