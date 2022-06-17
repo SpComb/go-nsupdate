@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/vishvananda/netlink"
 	"io"
 	"log"
 	"net"
+
+	"github.com/vishvananda/netlink"
 )
 
 type AddrSet struct {
@@ -91,7 +92,9 @@ func (addrs *AddrSet) Read() error {
 			}
 
 			// XXX: scope and other filters?
-			addrs.updateAddr(addrUpdate.Addr, addrUpdate.NewAddr)
+			addrs.updateAddr(netlink.Addr{
+				IPNet: &addrUpdate.LinkAddress,
+				Scope: addrUpdate.Scope}, addrUpdate.NewAddr)
 
 			return nil
 		}
@@ -104,7 +107,7 @@ func (addrs *AddrSet) updateAddr(addr netlink.Addr, up bool) {
 		return
 	}
 
-	ip := addr.IP
+	ip := addr.IPNet.IP
 
 	if up {
 		log.Printf("%v: up %v", addrs, ip)
