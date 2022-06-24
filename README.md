@@ -1,3 +1,5 @@
+[![Go build](https://github.com/SpComb/go-nsupdate/actions/workflows/build.yml/badge.svg)](https://github.com/SpComb/go-nsupdate/actions/workflows/build.yml)
+
 # go-nsupdate
 Update dynamic DNS records from netlink.
 
@@ -38,10 +40,10 @@ The DNS update requests are retried in the background (XXX: currently blocks for
 
 
 ## Example
-    
+
     # Using a generated TSIG key:
     # TSIG_SECRET=$(python -c 'import os; print os.urandom(32).encode("base64")')
-    
+
     TSIG_SECRET=... go-nsupdate --interface=vlan-wan --tsig-algorithm=hmac-sha256 yzzrt.dyn.qmsk.net --watch
     2016/06/19 21:29:33 discover server=zovoweix.qmsk.net.
     2016/06/19 21:29:33 using TSIG: yzzrt.dyn.qmsk.net (algo=hmac-sha256.)
@@ -61,7 +63,7 @@ The DNS update requests are retried in the background (XXX: currently blocks for
     ;; ADDITIONAL SECTION:
 
     ;; TSIG PSEUDOSECTION:
-    yzzrt.dyn.qmsk.net.     0       ANY     TSIG     hmac-sha256. 20160619182933 300 0  61616 0 0 
+    yzzrt.dyn.qmsk.net.     0       ANY     TSIG     hmac-sha256. 20160619182933 300 0  61616 0 0
     2016/06/19 21:29:33 update answer:
     ;; opcode: UPDATE, status: NOERROR, id: 61616
     ;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1
@@ -72,7 +74,7 @@ The DNS update requests are retried in the background (XXX: currently blocks for
     ;; ADDITIONAL SECTION:
 
     ;; TSIG PSEUDOSECTION:
-    yzzrt.dyn.qmsk.net.     0       ANY     TSIG     hmac-sha256. 20160619182933 300 32 E083433B2893B2036B24549E3537C6E17B858019B9862DC2EB9EDFB959D03232 61616 0 0 
+    yzzrt.dyn.qmsk.net.     0       ANY     TSIG     hmac-sha256. 20160619182933 300 32 E083433B2893B2036B24549E3537C6E17B858019B9862DC2EB9EDFB959D03232 61616 0 0
     2016/06/19 21:46:34 AddrSet iface=vlan-wan: up 213.243.178.191
     2016/06/19 21:46:34 addrs update...
     2016/06/19 21:46:34 update...
@@ -91,7 +93,7 @@ The DNS update requests are retried in the background (XXX: currently blocks for
     ;; ADDITIONAL SECTION:
 
     ;; TSIG PSEUDOSECTION:
-    yzzrt.dyn.qmsk.net.     0       ANY     TSIG     hmac-sha256. 20160619184634 300 0  30973 0 0 
+    yzzrt.dyn.qmsk.net.     0       ANY     TSIG     hmac-sha256. 20160619184634 300 0  30973 0 0
     2016/06/19 21:46:35 update answer:
     ;; opcode: UPDATE, status: NOERROR, id: 30973
     ;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 1
@@ -103,4 +105,3 @@ The DNS update requests are retried in the background (XXX: currently blocks for
 
     ;; TSIG PSEUDOSECTION:
     yzzrt.dyn.qmsk.net.     0       ANY     TSIG     hmac-sha256. 20160619184635 300 32 1F7F1EB8A3D5213EAAA163AE78388D48911495A0F3E2870688F3338160905EC9 30973 0
-
