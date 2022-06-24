@@ -1,3 +1,5 @@
+[![Go build](https://github.com/SpComb/go-nsupdate/actions/workflows/build.yml/badge.svg)](https://github.com/SpComb/go-nsupdate/actions/workflows/build.yml)
+
 # go-nsupdate
 Update dynamic DNS records from netlink.
 
