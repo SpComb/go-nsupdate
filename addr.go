@@ -7,12 +7,14 @@ import (
 	"net"
 
 	"github.com/vishvananda/netlink"
+	"github.com/vishvananda/netlink/nl"
 )
 
 type AddrSet struct {
 	linkAttrs netlink.LinkAttrs
 	linkChan  chan netlink.LinkUpdate
 	addrChan  chan netlink.AddrUpdate
+	family    Family
 
 	addrs map[string]net.IP
 }
@@ -37,6 +39,7 @@ func InterfaceAddrs(iface string, family Family) (*AddrSet, error) {
 		return nil, fmt.Errorf("netlink.LinkByName %v: %v", iface, err)
 	} else {
 		addrs.linkAttrs = *link.Attrs()
+		addrs.family = family
 	}
 
 	// list
@@ -88,6 +91,11 @@ func (addrs *AddrSet) Read() error {
 			}
 
 			if addrUpdate.LinkIndex != addrs.linkAttrs.Index {
+				continue
+			}
+
+			addrUpdateFamily := Family(nl.GetIPFamily(addrUpdate.LinkAddress.IP))
+			if addrs.family != netlink.FAMILY_ALL && addrUpdateFamily != addrs.family {
 				continue
 			}
 
