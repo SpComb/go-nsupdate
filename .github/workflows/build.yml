@@ -1,0 +1,31 @@
+name: Go build
+
+on:
+  pull_request:
+    branches:
+      - 'master'
+  push:
+    branches:
+      - 'master'
+
+jobs:
+  build-go:
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.15
+
+      - name: Go Get
+        run: go get -d -u
+
+      - name: Go Build
+        run: go build -v
+
+      - name: Go Test
+        run: go test -v
