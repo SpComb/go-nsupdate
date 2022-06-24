@@ -25,11 +25,17 @@ jobs:
       - name: Download dependencies
         run: go mod download
 
+      - name: Check gofmt
+        run: .github/workflow-scripts/check-gofmt.sh .
+
       - name: Build
         run: go build -v
 
       - name: Test
         run: go test -v
+
+      - name: Vet
+        run: go vet
 
       - name: Upload
         uses: actions/upload-artifact@v3
