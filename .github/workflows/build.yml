@@ -9,7 +9,7 @@ on:
       - 'master'
 
 jobs:
-  build-go:
+  go-build:
     runs-on: ubuntu-20.04
 
     steps:
@@ -30,3 +30,9 @@ jobs:
 
       - name: Test
         run: go test -v
+
+      - name: Upload
+        uses: actions/upload-artifact@v3
+        with:
+          name: go-build
+          path: ./go-nsupdate
